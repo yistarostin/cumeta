@@ -1,0 +1,86 @@
+specification {
+  element user {
+    style {
+      shape person
+      color red
+    }
+  }
+  element softwareSystem
+  element container
+  element component
+}
+
+model {
+  user = user "Пользователь" "Пользователь CuMeta"
+
+  cumeta = softwareSystem "CuMeta" {
+    frontend = container "Frontend" {
+      description "Предоставляет интерфейс CuMeta"
+      technology "React"
+      style {
+        color green
+      }
+    }
+    apiGateway = container "Сервис API" {
+      description "Маршрутизация запросов и управление доступом, защита от DDOS"
+      technology "Node.js, Express"
+      style {
+        color gray
+      }
+    }
+
+    webapp = container "Веб-приложение" "Предоставляет интерфейс cumeta List" "JavaScript, React"
+
+
+    usersService = container "Users" {
+      description "Управление пользователями и аутентификация"
+      technology "Rust, Actix"
+      style {
+        color red
+      }
+    }
+
+    contentStorage = container "Content Storage" {
+      description "Управлеление контентом: посты, реакции и комментарии"
+      technology "Python, Flask"
+    }
+
+    statistics = container "Statistics" {
+      description "Статистика о лайках, комментариях и других метриках"
+      technology "Python, Flask"
+      style {
+        color amber
+      }
+    }
+
+    messageBroker = container "Message Broker" {
+      description "Обработка событий о взамодействии с контентом"
+      technology "Kafka"
+      style {
+        color indigo
+      }
+    }
+
+  }
+
+  user -> cumeta.frontend "Веб-Интерфейс" "UI в браузере"
+
+  cumeta.frontend -> cumeta.apiGateway "HTTPS Requests"
+
+  cumeta.apiGateway -> cumeta.usersService "Запрос информации о пользователе"
+  cumeta.apiGateway -> cumeta.contentStorage "Запрос медиа-контента для отображения"
+  cumeta.apiGateway -> cumeta.statistics "Запрос статистики для отображения"
+  cumeta.apiGateway -> cumeta.messageBroker "Создание сообщение"
+
+  cumeta.messageBroker -> cumeta.statistics "Получение сообщений по подписке"
+  cumeta.messageBroker -> cumeta.contentStorage "Получение сообщений по подписке"
+
+
+
+}
+
+views {
+  view index {
+    include *
+  }
+}
