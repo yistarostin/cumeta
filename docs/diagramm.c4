@@ -15,12 +15,13 @@ model {
 
   cumeta = softwareSystem "CuMeta" {
     frontend = container "Frontend" {
-      description "Предоставляет интерфейс CuMeta"
+      description "Интерфейс CuMeta"
       technology "React"
       style {
         color green
       }
     }
+
     apiGateway = container "Сервис API" {
       description "Маршрутизация запросов и управление доступом, защита от DDOS"
       technology "Node.js, Express"
@@ -28,9 +29,6 @@ model {
         color gray
       }
     }
-
-    webapp = container "Веб-приложение" "Предоставляет интерфейс cumeta List" "JavaScript, React"
-
 
     usersService = container "Users" {
       description "Управление пользователями и аутентификация"
@@ -40,12 +38,12 @@ model {
       }
     }
 
-    contentStorage = container "Content Storage" {
+    contentService = container "Content Storage" {
       description "Управлеление контентом: посты, реакции и комментарии"
       technology "Python, Flask"
     }
 
-    statistics = container "Statistics" {
+    statisticsService = container "StatisticsService" {
       description "Статистика о лайках, комментариях и других метриках"
       technology "Python, Flask"
       style {
@@ -61,20 +59,41 @@ model {
       }
     }
 
+    mediaStorage = container 'Media Content Storage' {
+      description "Хранение постов медиа-контента"
+      technology "Cassandra, MinIO/S3"
+
+    }
+
+    usersStorage = container 'Users database' {
+      description "Хранение информации о профилях пользователей"
+      technology "PostgreSQL"
+
+    }
+
+    statisticsStorage = container 'Statistics Warehouse' {
+      description "Аггрегирование и анализ статистики"
+      technology "ClickHouse"
+    }
+
+
   }
 
   user -> cumeta.frontend "Веб-Интерфейс" "UI в браузере"
 
-  cumeta.frontend -> cumeta.apiGateway "HTTPS Requests"
+  cumeta.frontend -> cumeta.apiGateway "HTTPS Запросы"
 
   cumeta.apiGateway -> cumeta.usersService "Запрос информации о пользователе"
-  cumeta.apiGateway -> cumeta.contentStorage "Запрос медиа-контента для отображения"
-  cumeta.apiGateway -> cumeta.statistics "Запрос статистики для отображения"
+  cumeta.apiGateway -> cumeta.contentService "Запрос медиа-контента для отображения"
+  cumeta.apiGateway -> cumeta.statisticsService "Запрос статистики для отображения"
   cumeta.apiGateway -> cumeta.messageBroker "Создание сообщение"
 
-  cumeta.messageBroker -> cumeta.statistics "Получение сообщений по подписке"
-  cumeta.messageBroker -> cumeta.contentStorage "Получение сообщений по подписке"
+  cumeta.messageBroker -> cumeta.statisticsService "Получение по подписке сообщений о взаимодействии с контентом"
+  cumeta.messageBroker -> cumeta.contentService "Получение по подписке сообщений о взаимодействии с контентом"
 
+  cumeta.statisticsService -> cumeta.statisticsStorage "Статистика использования"
+  cumeta.usersService -> cumeta.usersStorage "Информация о пользователях"
+  cumeta.contentService -> cumeta.mediaStorage "Медиа-файлы"
 
 
 }
