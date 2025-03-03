@@ -1,0 +1,146 @@
+@startuml
+!define primary_key(x) <b><color:#b8861b><&key></color> x</b>
+!define foreign_key(x) <color:#aaaaaa><&key></color> x
+!define column(x) <color:#efefef><&media-record></color> x
+!define table(x) entity x << (T, white) >>
+
+
+table(Users) {
+  primary_key(user_id): Int <<PK>>
+  --
+  column(username): VARCHAR(255) NOT NULL <<U>>
+  column(email): VARCHAR(255) NOT NULL <<U>>
+  column(password_hash): VARCHAR(255)
+  column(activation_date): DATETIME
+  column(is_deactivated): BOOLEAN
+}
+
+table(UsersInfo) {
+  primary_key(users_info_id): UUID <<PK>>
+  --
+  foreign_key(user_id): Int <<FK>>
+  column(about): VARCHAR(255)
+  column(relationship_status): VARCHAR(255)
+  column(education): VARCHAR(255)
+  column(job): VARCHAR(255)
+  column(update_time): DATETIME
+}
+
+
+enum ReactionType {
+  REACTION
+  MESSAGE
+  POST
+}
+
+table(Reaction) {
+  primary_key(id): UUID <<PK>>
+  --
+  foreign_key(parent_id): UUID <<FK>>
+  foreign_key(user_id): Int <<FK>>
+  
+  column(content): TEXT
+  column(type): ReactionType
+  column(created): DATETIME
+  column(last_edit): DATETIME
+  column(is_hided): BOOLEAN
+}
+
+enum MediaInfoType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+table(MediaInfo) {
+  primary_key(media_id): UUID <<PK>>
+  --
+  foreign_key(reaction_id): UUID <<FK>>
+  foreign_key(user_id): Int <<FK>>
+
+  column(title): TEXT
+  column(type): MediaInfoType
+  column(created): DATETIME
+  column(last_edit): DATETIME
+  column(show_preview): BOOLEAN
+}
+
+table(Ads) {
+  primary_key(media_id): UUID <<PK>>
+  --
+  foreign_key(media_id): UUID <<FK>>
+  column(customer): TEXT
+  column(description): TEXT
+  column(company_start): DATETIME
+  column(company_end): DATETIME
+  column(regularity): BOOLEAN
+}
+
+enum LinkType {
+  FOLLOWS
+  IGNORES
+  BLACKLISTS
+}
+
+table(UserLinks) {
+  primary_key("link_id"): UUID <<PK>>
+  --
+  foreign_key(userFrom): UUID <<FK>>
+  foreign_key(userTo): UUID <<FK>>
+  column(link_created): DATETIME
+  column(link_type): LinkType
+  column(reason): VARCHAR(255)
+}
+
+
+
+table(MediaViews) {
+  primary_key("media_view_id"): UUID <<PK>>
+  --
+  foreign_key(media_id): UUID <<FK>>
+  foreign_key(viewer_id): Int <<FK>>
+  column(view_date): DATETIME
+  column(device): VARCHAR (255)
+  column(view_reason_tags): VARCHAR (255)
+}
+
+table(PostsViews) {
+  primary_key("post_view_id"): UUID <<PK>>
+  --
+  foreign_key(post_id): UUID <<FK>>
+  foreign_key(viewer_id): Int <<FK>>
+  column(view_date): DATETIME
+  column(device): VARCHAR (255)
+  column(view_reason_tags): VARCHAR (255)
+}
+
+table(ProfileViews) {
+  primary_key("profile_view_id"): UUID <<PK>>
+  --
+  foreign_key(profile_id): Int <<FK>>
+  foreign_key(viewer_id): Int <<FK>>
+  column(view_date): DATETIME
+  column(device): VARCHAR (255)
+  column(view_reason_tags): VARCHAR (255)
+}
+
+
+
+MediaViews }|..|| MediaInfo
+MediaViews }|..|| Users
+
+PostsViews }|..|| Reaction
+PostsViews }|..|| Users
+
+ProfileViews }|..|| Users
+
+ReactionType }|..|| Reaction
+Ads }|..|| MediaInfo
+MediaInfoType }|..|| MediaInfo
+LinkType }|..|| UserLinks
+MediaInfo }|..|| Reaction
+MediaInfo }|..|| Users
+Reaction }|..|| Users
+UserLinks }|..|| Users
+UsersInfo }|..|| Users
+@enduml
