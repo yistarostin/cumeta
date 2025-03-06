@@ -1,0 +1,43 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./users
+      dockerfile: Dockerfile
+    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn users.main:app --host 0.0.0.0 --port 8000'
+    volumes:
+      - .:/users
+    ports:
+      - 8000:8000
+    environment:
+      - DATABASE_URL=postgresql://fastapi_traefik:fastapi_traefik@db:5432/fastapi_traefik
+    depends_on:
+      - db
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    command: 'uvicorn gateway.main:app --host 0.0.0.0 --port 9200'
+    volumes:
+      - .:/gateway
+    ports:
+      - 9200:9200
+    environment:
+      APP_ADDRESS: web:8000
+    depends_on:
+      - web
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    expose:
+      - 5432
+    environment:
+      - POSTGRES_USER=fastapi_traefik
+      - POSTGRES_PASSWORD=fastapi_traefik
+      - POSTGRES_DB=fastapi_traefik
+
+volumes:
+  postgres_data:
