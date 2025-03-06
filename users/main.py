@@ -1,11 +1,11 @@
 import typing
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 import logging
 import datetime
 import sys
+import ormar
 from pydantic import BaseModel
-import sqlalchemy
 from users.db import database, User, UserInfo
 
 root = logging.getLogger()
@@ -84,19 +84,14 @@ async def update_user(user: UserBaseInfo):
         raise HTTPException(status_code=404, detail="User not found")
 
 
-@app.post("/delete/{login}")
-async def delete_user(login: str):
-    user = await User.objects.filter(username=login).delete()
-    return {
-        "status": ("Deleted" if user > 0 else "Such user does not exist, no effect")
-    }
-
-
 @app.get("/get/{username}")
 async def get_user(username: str):
-    return await User.objects.fields(
-        ["username", "email", "name", "surname", "created", "updated"]
-    ).get(username=username)
+    try:
+        return await User.objects.fields(
+            ["username", "email", "name", "surname", "created", "updated"]
+        ).get(username=username)
+    except ormar.exceptions.NoMatch:
+        raise HTTPException(status_code=404, detail="User not found")
 
 
 @app.get("/get_info/{username}")
@@ -114,7 +109,7 @@ async def get_info_user(username: str):
         )
 
 
-@app.get("/authorize")
+@app.post("/authorize")
 async def authorize(login: LoginItem):
     user_found = await User.objects.filter(
         username=login.username, password=login.password
@@ -124,7 +119,7 @@ async def authorize(login: LoginItem):
     return JSONResponse(content={"message": "Resource Not Found"}, status_code=404)
 
 
-@app.get("/edit")
+@app.post("/edit")
 async def edit(user: UserBaseInfo):
     try:
         user_object = await User.objects.get(username=user.username)
@@ -144,7 +139,7 @@ async def edit(user: UserBaseInfo):
     return result
 
 
-@app.get("/edit_info")
+@app.post("/edit_info")
 async def edit_info(user: UserExtendedInfo):
     logger.debug("User edit request: %s", user)
     try:

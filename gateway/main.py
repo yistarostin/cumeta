@@ -1,5 +1,7 @@
 from typing import Union
 import typing
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
 import requests
 import logging
 import os
@@ -22,24 +24,22 @@ authorizer = Authorizer()
 
 
 class Addresses(Enum):
-    """
-    Addresses is an enumeration that contains various endpoint URLs for backend services.
-
-    Attributes:
-        BACKEND_ROOT (str): The root URL of the backend service.
-        CHECK_USER_ADDRESS (str): The URL to check user authorization.
-        ADD_USER (str): The URL to add a new user.
-        UPDATE_USER (str): The URL to update an existing user.
-        DELETE_USER (str): The URL to delete a user.
-        GET_USER (str): The URL to retrieve user information.
-    """
 
     BACKEND_ROOT = f"http://{backend_uri}"
+
     CHECK_USER_ADDRESS = f"{BACKEND_ROOT}/authorize"
     ADD_USER = f"{BACKEND_ROOT}/create"
-    UPDATE_USER = f"{backend_uri}/update"
-    DELETE_USER = f"{backend_uri}/delete"
-    GET_USER = f"{backend_uri}/get"
+
+    GET_USER = f"{BACKEND_ROOT}/get"
+    GET_USER_INFO = f"{BACKEND_ROOT}/get_info"
+
+    EDIT_USER = f"{BACKEND_ROOT}/edit"
+    EDIT_USER_INFO = f"{BACKEND_ROOT}/edit_info"
+
+
+class GetPayload(BaseModel):
+    username: str
+    token: str
 
 
 def _validate_request(payload):
@@ -67,47 +67,62 @@ async def read_root():
     return {"response": backend_response.json()}
 
 
-@app.get("/users/create")
+@app.post("/users/create")
 async def create_user(request: Request):
-    user_payload = request.json()["user"]
-    response = await requests.post(
-        Addresses.ADD_USER.value, json=user_payload, timeout=10
-    )
+    payload = request.json()["user"]
+    response = await requests.post(Addresses.ADD_USER.value, json=payload, timeout=10)
     return response.json()
 
 
-@app.get("/users/update")
-async def update_user(request: Request):
+@app.post("/users/edit")
+async def edit_user(request: Request):
     payload = await request.json()
-    logger.info("User update request: %s", payload)
     _validate_request(payload)
-    return await request.post(Addresses.UPDATE_USER, json=payload, timeout=10)
+    logger.info("User edit request: %s", payload)
+    payload.pop("token")
+    return await request.post(Addresses.EDIT_USER, json=payload, timeout=10)
 
 
-@app.get("/users/delete")
-async def delete_user(request: Request):
+@app.post("/users/edit_info")
+async def edit_user_info(request: Request):
     payload = await request.json()
-    logger.info("User delete request: %s", payload)
+    logger.info("User edit info request: %s", payload)
     _validate_request(payload)
-    response = await requests.post(
-        Addresses.DELETE_USER.value, json=payload, timeout=10
-    )
-    return response
+    payload.pop("token")
+    return await request.post(Addresses.EDIT_USER_INFO, json=payload, timeout=10)
 
 
-@app.get("/users/get")
-async def get_user_info(request: Request):
-    payload = await request.json()
-    logger.info("User get info request: %s", payload)
+@app.post("/users/get")
+async def get_user(request: GetPayload):
+    payload = request.dict()
+    logger.info("User get request: %s", payload)
     _validate_request(payload)
-    response = await requests.post(
+    payload.pop("token")
+    response = requests.get(
         f"{Addresses.GET_USER.value}/{payload['username']}", timeout=10
     )
-    return response
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="User not found")
+    return jsonable_encoder(response.json())
 
 
-@app.get("/users/check_token")
-async def check_token(request: Request):
+@app.post("/users/get_info")
+async def get_user_info(request: GetPayload):
+    payload = request.dict()
+    logger.info("User get info request: %s", payload)
+    _validate_request(payload)
+    payload.pop("token")
+    response = requests.get(
+        f"{Addresses.GET_USER_INFO.value}/{payload['username']}", timeout=10
+    )
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return jsonable_encoder(response.json())
+
+
+@app.post("/users/check_token")
+async def check_token(request: GetPayload):
     json = await request.json()
     username, token = json["username"], json["token"]
     if authorizer.check_token(username, token):
@@ -115,7 +130,7 @@ async def check_token(request: Request):
     raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-@app.get("/users/authorize")
+@app.post("/users/authorize")
 async def read_users_me(
     request: Request,
 ):
