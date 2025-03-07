@@ -23,7 +23,6 @@ class Authorizer:
         return token
 
     def check_token(self, username: str, token: str) -> bool:
-        return True
         decoded_username = jwt.decode(
             token, self._public_key, algorithms=[self._JWT_ALGORITHM]
         ).get(self._JWT_KEY)
