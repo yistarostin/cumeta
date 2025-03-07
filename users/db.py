@@ -20,9 +20,9 @@ class User(ormar.Model):
     id: int = ormar.Integer(primary_key=True)
     username: str = ormar.String(max_length=128, unique=True)
     password: str = ormar.String(max_length=128, nullable=False)
-    email: str = ormar.String(max_length=128, nullable=False)
-    name: str = ormar.String(max_length=128, nullable=False)
-    surname: str = ormar.String(max_length=128, nullable=False)
+    email: str = ormar.String(max_length=128, nullable=True)
+    name: str = ormar.String(max_length=128, nullable=True)
+    surname: str = ormar.String(max_length=128, nullable=True)
     created: sqlalchemy.DateTime = ormar.DateTime(nullable=True)
     updated: sqlalchemy.DateTime = ormar.DateTime(nullable=True)
 
