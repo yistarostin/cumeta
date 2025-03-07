@@ -29,7 +29,6 @@ def test_hash_password_empty():
 
 
 def test_validate_password_empty():
-    # Test validating an empty password
     password = ""
     hashed = PasswordHasher.hash_password(password)
     assert PasswordHasher.validate_password(password, hashed)
