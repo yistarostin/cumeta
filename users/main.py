@@ -96,7 +96,10 @@ async def edit_info(user: UserExtendedInfo):
     except ormar.exceptions.NoMatch:
         raise HTTPException(status_code=404, detail="User not found")
 
-    await UserInfo.objects.get_or_create(
+    if not await UserInfo.objects.filter(user_id=user_object.id).exists():
+        await UserInfo.objects.create(user_id=user_object.id)
+
+    await UserInfo.objects.filter(user_id=user_object.id).update(
         user_id=user_object.id,
         about=user.about,
         relationship_status=user.relationship_status,

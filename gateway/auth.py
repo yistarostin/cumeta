@@ -23,8 +23,13 @@ class Authorizer:
         return token
 
     def check_token(self, username: str, token: str) -> bool:
-        decoded_username = jwt.decode(
-            token, self._public_key, algorithms=[self._JWT_ALGORITHM]
-        ).get(self._JWT_KEY)
+        logger.info(f"Truing to authorize username: {username}")
+        try:
+            decoded_username = jwt.decode(
+                token, self._public_key, algorithms=[self._JWT_ALGORITHM]
+            ).get(self._JWT_KEY)
+        except jwt.DecodeError:
+            logger.error(f"Failed to authorize username: {username}")
+            return False
         logger.info(f"Decoded username: {decoded_username}")
         return decoded_username == username
