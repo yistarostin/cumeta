@@ -48,7 +48,7 @@ class PostServiceStub(object):
         self.UpdatePost = channel.unary_unary(
                 '/socialnetwork.PostService/UpdatePost',
                 request_serializer=proto_dot_posts__pb2.UpdatePostRequest.SerializeToString,
-                response_deserializer=proto_dot_posts__pb2.Post.FromString,
+                response_deserializer=proto_dot_posts__pb2.UpdatePostResponse.FromString,
                 _registered_method=True)
         self.GetPost = channel.unary_unary(
                 '/socialnetwork.PostService/GetPost',
@@ -111,7 +111,7 @@ def add_PostServiceServicer_to_server(servicer, server):
             'UpdatePost': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdatePost,
                     request_deserializer=proto_dot_posts__pb2.UpdatePostRequest.FromString,
-                    response_serializer=proto_dot_posts__pb2.Post.SerializeToString,
+                    response_serializer=proto_dot_posts__pb2.UpdatePostResponse.SerializeToString,
             ),
             'GetPost': grpc.unary_unary_rpc_method_handler(
                     servicer.GetPost,
@@ -204,7 +204,7 @@ class PostService(object):
             target,
             '/socialnetwork.PostService/UpdatePost',
             proto_dot_posts__pb2.UpdatePostRequest.SerializeToString,
-            proto_dot_posts__pb2.Post.FromString,
+            proto_dot_posts__pb2.UpdatePostResponse.FromString,
             options,
             channel_credentials,
             insecure,

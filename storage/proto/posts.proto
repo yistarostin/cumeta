@@ -57,11 +57,15 @@ message CreatePostResponse{
     string post_id = 1;
 }
 
+message UpdatePostResponse{
+    Post post = 1;
+}
+
 service PostService {
     rpc CreatePost(CreatePostRequest) returns (CreatePostResponse);
     rpc DeletePost(DeletePostRequest) returns (google.protobuf.Empty);
 
-    rpc UpdatePost(UpdatePostRequest) returns (Post);
+    rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse);
 
     rpc GetPost(GetPostRequest) returns (GetPostResponse);
 

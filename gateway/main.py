@@ -20,6 +20,8 @@ from gateway.models import (
     TokenPayload,
     UserBaseInfo,
     UserExtendedInfo,
+    PostUpdatePayload,
+    PostsGetPayload,
 )
 
 from gateway.proto import posts_pb2
@@ -192,3 +194,69 @@ async def posts_get(request: PostGetPayload):
             "updated_at": post.updated_at,
         }
     )
+
+
+@app.post("/posts/update")
+async def posts_update(request: PostUpdatePayload):
+    logger.info("Post update info request: %s", request)
+    _validate_request(request)
+
+    grpc_request = posts_pb2.UpdatePostRequest(
+        post_id=request.post_id,
+        title=request.title,
+        description=request.description,
+        is_private=request.is_private,
+        tags=request.tags,
+    )
+    grpc_response = stub.UpdatePost(grpc_request)
+    post = grpc_response.post
+    logger.info(grpc_response)
+    if post.post_id == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return jsonable_encoder(
+        {
+            "post_id": post.post_id,
+            "title": post.title,
+            "description": post.description,
+            "creator_id": post.creator_id,
+            "created_at": post.created_at,
+            "updated_at": post.updated_at,
+        }
+    )
+
+
+@app.post("/posts/get_many")
+async def posts_get_many(request: PostsGetPayload):
+    logger.info("User get info request: %s", request)
+
+    try:
+        grpc_request = posts_pb2.GetPostsRequest(
+            page_size=request.page_size,
+            page=request.page_number,
+        )
+        grpc_response = stub.GetPosts(grpc_request)
+        posts = grpc_response.posts
+        logger.info(grpc_response)
+
+        if not posts:
+            raise HTTPException(status_code=404, detail="Posts not found")
+        posts = filter(
+            lambda post: (not post.is_private) or (post.creator_id == request.username),
+            posts,
+        )
+        return jsonable_encoder(
+            [
+                {
+                    "post_id": post.post_id,
+                    "title": post.title,
+                    "description": post.description,
+                    "creator_id": post.creator_id,
+                    "created_at": post.created_at,
+                    "updated_at": post.updated_at,
+                    "is_private": post.is_private,
+                }
+                for post in posts
+            ]
+        )
+    except grpc.RpcError as e:
+        raise HTTPException(status_code=404, detail="Posts not found")

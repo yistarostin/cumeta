@@ -52,6 +52,24 @@ class PostGetPayload(BaseModel):
     token: typing.Optional[str]
 
 
+class PostsGetPayload(BaseModel):
+    username: typing.Optional[str]
+    token: typing.Optional[str]
+    page_number: int
+    page_size: int
+
+
+class PostUpdatePayload(BaseModel):
+    post_id: str
+    title: typing.Optional[str]
+    description: typing.Optional[str]
+    is_private: typing.Optional[bool]
+    tags: typing.Optional[typing.List[str]]
+
+    username: typing.Optional[str]
+    token: typing.Optional[str]
+
+
 backend_uri = os.environ.get("BACKEND_APP_ADDRESS", "web:8000")
 
 # posts_storage_uri = os.environ.get("POSTS_STORAGE_ADDRESS", "0.0.0.0:50051")

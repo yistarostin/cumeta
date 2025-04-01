@@ -16,7 +16,7 @@ COPY . gateway
 COPY ./requirements.txt gateway
 RUN pip install -r gateway/requirements.txt
 
-RUN python3 -m grpc_tools.protoc -I. --python_out=./ --pyi_out=./ --grpc_python_out=./ gateway/proto/posts.proto 
+RUN python3 -m grpc_tools.protoc -I. --python_out=./gateway --pyi_out=./gateway --grpc_python_out=./gateway gateway/proto/posts.proto 
 
 WORKDIR /gateway
 

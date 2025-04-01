@@ -59,53 +59,51 @@ class PostService(posts_pb2_grpc.PostServiceServicer):
             return posts_pb2.GetPostResponse()
 
     async def UpdatePost(self, request, context):
-        try:
-            post = Post.get(id=request.post_id)
-            if post is None:
-                context.set_details("Post not found")
-                context.set_code(grpc.StatusCode.NOT_FOUND)
-                return posts_pb2.Post()
-
-            post.title = request.title
-            post.description = request.description
-            post.is_private = request.is_private
-            post.tags.extend(request.tags)
-
-            Post[request.post_id] = post
-            return post
-        if not User.objects.filter(username=user.username).exists():
-            raise HTTPException(status_code=404, detail="User not found")
-        await User.objects.filter(username=user.username).update(
-        username=user.username,
-        email=user.email,
-        name=user.name,
-        surname=user.surname,
-        updated=datetime.datetime.now(),
-        )
-        return (
-            content={"status": "Updated user base info for user:" + user.username},
-            status_code=200,
-        )
-
-    async def DeletePost(self, request, context):
-        if request.post_id in posts:
-            del posts[request.post_id]
-        else:
-            context.set_details("Post not found")
+        if not Post.objects.filter(id=int(request.post_id)).exists():
             context.set_code(grpc.StatusCode.NOT_FOUND)
-        return posts_pb2.Empty()
+            return posts_pb2.UpdatePostRequest()
+        await Post.objects.filter(id=int(request.post_id)).update(
+            title=request.title,
+            description=request.description,
+            is_private=request.is_private,
+            tags=";".join(request.tags),
+            updated=datetime.datetime.now(),
+        )
+        # form response
+        return posts_pb2.UpdatePostResponse(
+            post=posts_pb2.Post(
+                post_id=request.post_id,
+                title=request.title,
+                description=request.description,
+                is_private=request.is_private,
+                tags=request.tags,
+            )
+        )
 
     async def GetPosts(self, request, context):
-        post_list = list(posts.values())
-        total_count = len(post_list)
-
-        start_index = (request.page - 1) * request.page_size
-        end_index = start_index + request.page_size
-        paginated_posts = post_list[start_index:end_index]
-
-        return posts_pb2.GetPostsResponse(
-            total_count=total_count, posts=paginated_posts
-        )
+        page = request.page
+        page_size = request.page_size
+        result = []
+        for post_id in range(page, page + page_size):
+            try:
+                post = await Post.objects.get(id=post_id)
+                result.append(
+                    posts_pb2.Post(
+                        post_id=str(post.id),
+                        title=post.title,
+                        description=post.description,
+                        creator_id=post.user_owner,
+                        created_at=str(post.created),
+                        updated_at=str(post.updated),
+                        is_private=post.is_private,
+                        tags=post.tags.split(";"),
+                    )
+                )
+            except ormar.exceptions.NoMatch:
+                context.set_details("Post not found")
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                return posts_pb2.GetPostsResponse(posts=result)
+        return posts_pb2.GetPostsResponse(posts=result)
 
 
 async def serve():
@@ -116,7 +114,7 @@ async def serve():
         user_owner="yars",
         title="test",
         description="test",
-        is_private=False,
+        is_private=True,
         tags=";".join(["test"]),
         created=datetime.datetime.now(),
         updated=datetime.datetime.now(),
