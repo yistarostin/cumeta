@@ -5,6 +5,7 @@ import datetime
 from proto import posts_pb2
 from proto import posts_pb2_grpc
 import ormar
+from google.protobuf.empty_pb2 import Empty
 from db import database, Post
 import logging
 import sys
@@ -56,7 +57,7 @@ class PostService(posts_pb2_grpc.PostServiceServicer):
         except ormar.exceptions.NoMatch:
             context.set_details("Post not found")
             context.set_code(grpc.StatusCode.NOT_FOUND)
-            return posts_pb2.GetPostResponse()
+            return google.protobuf.empty_pb2.Empty()
 
     async def UpdatePost(self, request, context):
         if not Post.objects.filter(id=int(request.post_id)).exists():
@@ -100,10 +101,19 @@ class PostService(posts_pb2_grpc.PostServiceServicer):
                     )
                 )
             except ormar.exceptions.NoMatch:
-                context.set_details("Post not found")
-                context.set_code(grpc.StatusCode.NOT_FOUND)
-                return posts_pb2.GetPostsResponse(posts=result)
+                continue
         return posts_pb2.GetPostsResponse(posts=result)
+
+    async def DeletePost(self, request, context):
+        post_id = request.post_id
+        try:
+            post = await Post.objects.get(id=int(post_id))
+            await post.delete()
+            return Empty()
+        except ormar.exceptions.NoMatch:
+            context.set_details("Post not found")
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            return Empty()
 
 
 async def serve():

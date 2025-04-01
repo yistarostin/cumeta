@@ -156,73 +156,84 @@ async def read_users_me(
 
 @app.post("/posts/create")
 async def posts_create(request: PostCreatePayload):
-    logger.info("Create post request request: %s", request)
-    _validate_request(request)
+    try:
+        logger.info("Create post request request: %s", request)
+        _validate_request(request)
 
-    grpc_request = posts_pb2.CreatePostRequest(
-        title=request.title,
-        description=request.description,
-        creator_id=request.creator_id,
-        is_private=request.is_private,
-        tags=request.tags,
-    )
-    grpc_response = stub.CreatePost(grpc_request)
-    logger.info(grpc_response)
-    if grpc_response.post_id == 0:
+        grpc_request = posts_pb2.CreatePostRequest(
+            title=request.title,
+            description=request.description,
+            creator_id=request.creator_id,
+            is_private=request.is_private,
+            tags=request.tags,
+        )
+        grpc_response = stub.CreatePost(grpc_request)
+        logger.info(grpc_response)
+        if grpc_response.post_id == 0:
+            raise HTTPException(status_code=500, detail="Post creation failed")
+        return {"post_id": grpc_response.post_id}
+    except grpc.RpcError:
         raise HTTPException(status_code=500, detail="Post creation failed")
-    return {"post_id": grpc_response.post_id}
 
 
 @app.post("/posts/get")
 async def posts_get(request: PostGetPayload):
-    logger.info("User get info request: %s", request)
-    _validate_request(request)
+    try:
+        logger.info("User get info request: %s", request)
+        _validate_request(request)
 
-    grpc_request = posts_pb2.GetPostRequest(post_id=request.post_id)
-    grpc_response = stub.GetPost(grpc_request)
-    post = grpc_response.post
-    logger.info(grpc_response)
-    if post.post_id == 0:
+        grpc_request = posts_pb2.GetPostRequest(post_id=request.post_id)
+        grpc_response = stub.GetPost(grpc_request)
+        post = grpc_response.post
+        logger.info(grpc_response)
+        if post.post_id == 0:
+            raise HTTPException(status_code=404, detail="Post not found")
+        if post.is_private and post.creator_id != request.username:
+            raise HTTPException(status_code=403, detail="Post is private")
+        return jsonable_encoder(
+            {
+                "post_id": post.post_id,
+                "title": post.title,
+                "description": post.description,
+                "creator_id": post.creator_id,
+                "created_at": post.created_at,
+                "updated_at": post.updated_at,
+            }
+        )
+    except grpc.RpcError:
         raise HTTPException(status_code=404, detail="Post not found")
-    return jsonable_encoder(
-        {
-            "post_id": post.post_id,
-            "title": post.title,
-            "description": post.description,
-            "creator_id": post.creator_id,
-            "created_at": post.created_at,
-            "updated_at": post.updated_at,
-        }
-    )
 
 
 @app.post("/posts/update")
 async def posts_update(request: PostUpdatePayload):
-    logger.info("Post update info request: %s", request)
-    _validate_request(request)
+    try:
+        logger.info("Post update info request: %s", request)
+        _validate_request(request)
 
-    grpc_request = posts_pb2.UpdatePostRequest(
-        post_id=request.post_id,
-        title=request.title,
-        description=request.description,
-        is_private=request.is_private,
-        tags=request.tags,
-    )
-    grpc_response = stub.UpdatePost(grpc_request)
-    post = grpc_response.post
-    logger.info(grpc_response)
-    if post.post_id == 0:
+        grpc_request = posts_pb2.UpdatePostRequest(
+            post_id=request.post_id,
+            title=request.title,
+            description=request.description,
+            is_private=request.is_private,
+            tags=request.tags,
+        )
+        grpc_response = stub.UpdatePost(grpc_request)
+        post = grpc_response.post
+        logger.info(grpc_response)
+        if post.post_id == 0:
+            raise HTTPException(status_code=404, detail="Post not found")
+        return jsonable_encoder(
+            {
+                "post_id": post.post_id,
+                "title": post.title,
+                "description": post.description,
+                "creator_id": post.creator_id,
+                "created_at": post.created_at,
+                "updated_at": post.updated_at,
+            }
+        )
+    except grpc.RpcError:
         raise HTTPException(status_code=404, detail="Post not found")
-    return jsonable_encoder(
-        {
-            "post_id": post.post_id,
-            "title": post.title,
-            "description": post.description,
-            "creator_id": post.creator_id,
-            "created_at": post.created_at,
-            "updated_at": post.updated_at,
-        }
-    )
 
 
 @app.post("/posts/get_many")
@@ -258,5 +269,20 @@ async def posts_get_many(request: PostsGetPayload):
                 for post in posts
             ]
         )
-    except grpc.RpcError as e:
+    except grpc.RpcError:
         raise HTTPException(status_code=404, detail="Posts not found")
+
+
+@app.post("/posts/delete")
+async def posts_delete(request: PostGetPayload):
+    try:
+        logger.info("Post delete info request: %s", request)
+        _validate_request(request)
+        grpc_request = posts_pb2.DeletePostRequest(post_id=request.post_id)
+        grpc_response = stub.DeletePost(grpc_request)
+        logger.info(grpc_response)
+        return jsonable_encoder({"status": "ok", "message": "Post deleted"})
+    except grpc.RpcError:
+        return jsonable_encoder(
+            {"status": "ok", "message": "Post deleted or did not exist"}
+        )
