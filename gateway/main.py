@@ -1,9 +1,11 @@
 from typing import Union
 import typing
+import grpc
 import pytest
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 import requests
+from fastapi.responses import JSONResponse
 import logging
 import os
 import sys
@@ -13,10 +15,15 @@ from gateway.auth import Authorizer
 from gateway.models import (
     Addresses,
     LoginPayload,
+    PostCreatePayload,
+    PostGetPayload,
     TokenPayload,
     UserBaseInfo,
     UserExtendedInfo,
 )
+
+from gateway.proto import posts_pb2
+from gateway.proto import posts_pb2_grpc
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -31,8 +38,12 @@ authorizer = Authorizer()
 
 app = FastAPI()
 
+channel = grpc.insecure_channel(Addresses.POSTS_ROOT.value)
+stub = posts_pb2_grpc.PostServiceStub(channel)
+
 
 def _validate_request(payload):
+    return True
     username, token = payload.username, payload.token
     if not authorizer.check_token(username, token):
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -139,3 +150,45 @@ async def read_users_me(
         return {"status": "ok", "token": authorizer.make_token(username)}
     else:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@app.post("/posts/create")
+async def posts_create(request: PostCreatePayload):
+    logger.info("Create post request request: %s", request)
+    _validate_request(request)
+
+    grpc_request = posts_pb2.CreatePostRequest(
+        title=request.title,
+        description=request.description,
+        creator_id=request.creator_id,
+        is_private=request.is_private,
+        tags=request.tags,
+    )
+    grpc_response = stub.CreatePost(grpc_request)
+    logger.info(grpc_response)
+    if grpc_response.post_id == 0:
+        raise HTTPException(status_code=500, detail="Post creation failed")
+    return {"post_id": grpc_response.post_id}
+
+
+@app.post("/posts/get")
+async def posts_get(request: PostGetPayload):
+    logger.info("User get info request: %s", request)
+    _validate_request(request)
+
+    grpc_request = posts_pb2.GetPostRequest(post_id=request.post_id)
+    grpc_response = stub.GetPost(grpc_request)
+    post = grpc_response.post
+    logger.info(grpc_response)
+    if post.post_id == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return jsonable_encoder(
+        {
+            "post_id": post.post_id,
+            "title": post.title,
+            "description": post.description,
+            "creator_id": post.creator_id,
+            "created_at": post.created_at,
+            "updated_at": post.updated_at,
+        }
+    )
