@@ -45,7 +45,6 @@ stub = posts_pb2_grpc.PostServiceStub(channel)
 
 
 def _validate_request(payload):
-    return True
     username, token = payload.username, payload.token
     if not authorizer.check_token(username, token):
         raise HTTPException(status_code=401, detail="Unauthorized")
