@@ -34,7 +34,6 @@ class UserExtendedInfo(BaseModel):
 
 
 class PostCreatePayload(BaseModel):
-    post_id: str
     title: typing.Optional[str]
     description: typing.Optional[str]
     creator_id: typing.Optional[str]
