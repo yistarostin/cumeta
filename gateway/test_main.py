@@ -204,7 +204,7 @@ def test_posts_get_all_success(mock_stub, mock_validate_request):
         "username": "user1",
         "token": "valid_token",
         "page_number": 1,
-        "page_size": 1,
+        "page_size": 4,
     }
 
     response = client.post("/posts/get_many", json=payload)
