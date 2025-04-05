@@ -1,0 +1,5 @@
+psycopg2-binary==2.9.10
+fastapi==0.89.1
+ormar==0.12.1
+asyncpg==0.30.0
+grpcio-tools==1.71.0

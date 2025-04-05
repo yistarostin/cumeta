@@ -26,8 +26,25 @@ services:
       - 9200:9200
     environment:
       BACKEND_APP_ADDRESS: web:8000
+      POSTS_STORAGE_ADDRESS: 0.0.0.0:50051
     depends_on:
       - web
+      - storage
+
+  storage:
+    build:
+      context: ./storage
+      dockerfile: Dockerfile
+    command: bash -c 'while !</dev/tcp/storage_db/5433; do sleep 1; done; python3 storage/main.py'
+    volumes:
+      - .:/storage
+    ports:
+      - 50051:50051
+    environment:
+      - DATABASE_URL=postgresql://fastapi_traefik:fastapi_traefik@storage_db:5433/fastapi_traefik
+    depends_on:
+      - storage_db
+
   db:
     image: postgres:15-alpine
     volumes:
@@ -38,6 +55,20 @@ services:
       - POSTGRES_USER=fastapi_traefik
       - POSTGRES_PASSWORD=fastapi_traefik
       - POSTGRES_DB=fastapi_traefik
+
+  storage_db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    expose:
+      - 5433
+    ports:
+      - "5433:5433"
+    environment:
+      - POSTGRES_USER=fastapi_traefik
+      - POSTGRES_PASSWORD=fastapi_traefik
+      - POSTGRES_DB=fastapi_traefik
+      - PGPORT=5433
 
 volumes:
   postgres_data:

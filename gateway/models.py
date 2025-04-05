@@ -33,7 +33,46 @@ class UserExtendedInfo(BaseModel):
     token: typing.Optional[str]
 
 
+class PostCreatePayload(BaseModel):
+    title: typing.Optional[str]
+    description: typing.Optional[str]
+    creator_id: typing.Optional[str]
+    is_private: typing.Optional[bool]
+    tags: typing.Optional[typing.List[str]]
+
+    username: str
+    token: typing.Optional[str]
+
+
+class PostGetPayload(BaseModel):
+    post_id: str
+
+    username: typing.Optional[str]
+    token: typing.Optional[str]
+
+
+class PostsGetPayload(BaseModel):
+    username: typing.Optional[str]
+    token: typing.Optional[str]
+    page_number: int
+    page_size: int
+
+
+class PostUpdatePayload(BaseModel):
+    post_id: str
+    title: typing.Optional[str]
+    description: typing.Optional[str]
+    is_private: typing.Optional[bool]
+    tags: typing.Optional[typing.List[str]]
+
+    username: typing.Optional[str]
+    token: typing.Optional[str]
+
+
 backend_uri = os.environ.get("BACKEND_APP_ADDRESS", "web:8000")
+
+# posts_storage_uri = os.environ.get("POSTS_STORAGE_ADDRESS", "0.0.0.0:50051")
+posts_storage_uri = "storage:50051"
 
 
 class Addresses(Enum):
@@ -47,3 +86,5 @@ class Addresses(Enum):
 
     EDIT_USER = f"{_BACKEND_ROOT}/edit"
     EDIT_USER_INFO = f"{_BACKEND_ROOT}/edit_info"
+
+    POSTS_ROOT = f"{posts_storage_uri}"
