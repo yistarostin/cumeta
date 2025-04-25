@@ -1,3 +1,4 @@
+import datetime
 from typing import Union
 import typing
 import grpc
@@ -15,6 +16,7 @@ from gateway.auth import Authorizer
 from gateway.models import (
     Addresses,
     LoginPayload,
+    PostCommentPayload,
     PostCreatePayload,
     PostGetPayload,
     TokenPayload,
@@ -23,6 +25,8 @@ from gateway.models import (
     PostUpdatePayload,
     PostsGetPayload,
 )
+
+from gateway.kafka_api import KafkaWriter
 
 from gateway.proto import posts_pb2
 from gateway.proto import posts_pb2_grpc
@@ -42,6 +46,9 @@ app = FastAPI()
 
 channel = grpc.insecure_channel(Addresses.POSTS_ROOT.value)
 stub = posts_pb2_grpc.PostServiceStub(channel)
+
+
+kafka_writer = KafkaWriter()
 
 
 def _validate_request(payload):
@@ -71,6 +78,9 @@ async def create_user(request: LoginPayload):
     response = requests.post(
         Addresses.ADD_USER.value, json=jsonable_encoder(request), timeout=10
     )
+
+    if response.status_code == 200:
+        kafka_writer.add_registration_event(request.username, datetime.datetime.now())
     return response.json()
 
 
@@ -189,6 +199,10 @@ async def posts_get(request: PostGetPayload):
             raise HTTPException(status_code=404, detail="Post not found")
         if post.is_private and post.creator_id != request.username:
             raise HTTPException(status_code=403, detail="Post is private")
+
+        kafka_writer.add_view_event(
+            post.post_id, request.username, datetime.datetime.now()
+        )
         return jsonable_encoder(
             {
                 "post_id": post.post_id,
@@ -283,5 +297,35 @@ async def posts_delete(request: PostGetPayload):
         return jsonable_encoder({"status": "ok", "message": "Post deleted"})
     except grpc.RpcError:
         return jsonable_encoder(
-            {"status": "ok", "message": "Post deleted or did not exist"}
+            {"status": "error", "message": "Post deleted or did not exist"}
+        )
+
+
+@app.post("/posts/like")
+async def posts_like(request: PostGetPayload):
+    try:
+        logger.info("Post delete info request: %s", request)
+        _validate_request(request)
+        kafka_writer.add_like_event(
+            request.username, request.post_id, datetime.datetime.now()
+        )
+        return jsonable_encoder({"status": "ok", "message": "Post  liked"})
+    except grpc.RpcError:
+        return jsonable_encoder(
+            {"status": "error", "message": "Post deleted or did not exist"}
+        )
+
+
+@app.post("/posts/comment")
+async def posts_comment(request: PostCommentPayload):
+    try:
+        logger.info("Post delete info request: %s", request)
+        _validate_request(request)
+        kafka_writer.add_comment_event(
+            request.username, request.post_id, request.comment, datetime.datetime.now()
+        )
+        return jsonable_encoder({"status": "ok", "message": "Post commented"})
+    except grpc.RpcError:
+        return jsonable_encoder(
+            {"status": "error", "message": "Post deleted or did not exist"}
         )

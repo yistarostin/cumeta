@@ -51,6 +51,13 @@ class PostGetPayload(BaseModel):
     token: typing.Optional[str]
 
 
+class PostCommentPayload(BaseModel):
+    post_id: str
+    username: typing.Optional[str]
+    token: typing.Optional[str]
+    comment: str
+
+
 class PostsGetPayload(BaseModel):
     username: typing.Optional[str]
     token: typing.Optional[str]
